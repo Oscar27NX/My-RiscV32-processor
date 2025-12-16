@@ -1,0 +1,50 @@
+module MyInstructionDecoder (
+    input wire [31:0] instr,
+    output wire [6:0] opcode,
+    output wire [2:0] funct3,
+    output wire [6:0] funct7,
+    output reg [31:0] imm_ext // Sign-Extended Immediate
+);
+
+    // Field Extraction
+    assign opcode = instr[6:0];
+    assign funct3 = instr[14:12];
+    assign funct7 = instr[31:25];
+
+    // Temporary variable for calculation
+    reg [31:0] raw_imm;
+
+    // Combinational Sign Extension with PC Correction
+    always @(*) begin
+        case (opcode)
+            // I-Type (LW, ADDI, JALR)
+            7'b0000011, 7'b0010011, 7'b1100111: 
+                imm_ext = {{20{instr[31]}}, instr[31:20]};
+
+            // S-Type (SW)
+            7'b0100011: 
+                imm_ext = {{20{instr[31]}}, instr[31:25], instr[11:7]};
+
+            // B-Type (BEQ, BNE, BLT...)
+            // FIX: Subtract 4 because PC is already (PC+4) in Decode stage
+            7'b1100011: begin
+                raw_imm = {{20{instr[31]}}, instr[7], instr[30:25], instr[11:8], 1'b0};
+                imm_ext = raw_imm - 32'd4; 
+            end
+
+            // J-Type (JAL)
+            // FIX: Subtract 4 because PC is already (PC+4) in Decode stage
+            7'b1101111: begin
+                raw_imm = {{12{instr[31]}}, instr[19:12], instr[20], instr[30:21], 1'b0};
+                imm_ext = raw_imm - 32'd4;
+            end
+
+            // U-Type (LUI)
+            7'b0110111, 7'b0010111: 
+                imm_ext = {instr[31:12], 12'b0};
+
+            default: 
+                imm_ext = 32'b0;
+        endcase
+    end
+endmodule

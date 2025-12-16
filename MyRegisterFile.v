@@ -19,11 +19,6 @@ module MyRegisterFile #(parameter WIDTH = 32)(
     assign read_data2 = (rs2_sel == 5'b0) ? {WIDTH{1'b0}} : registers[rs2_sel];
     // Need this, otherwise, longer simulations may have X values
     integer i;
-    
-    initial begin
-        for (i = 0; i < 32; i = i + 1)
-            registers[i] = {WIDTH{1'b0}};
-    end
 
     // Write operation (synchronous)
     always @(posedge clk) begin
