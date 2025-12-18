@@ -12,6 +12,6 @@ module MyProgramCounter #(parameter WIDTH = 32)(
         if (rst)
             pc_out <= {WIDTH{1'b0}}; // Reset program counter to 0
         else
-            pc_out <= pc_in; // Update program counter with input value
+            pc_out <= pc_in;
     end
 endmodule

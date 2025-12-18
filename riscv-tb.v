@@ -6,10 +6,39 @@ module riscv_tb;
     reg rst;
 
     // Instantiate the Top Level Multicycle Processor
-    MyMulticycleProcessor uut (
+    rv_mc uut (
         .clk(clk),
         .rst(rst)
     );
+
+    // COUNTERS
+    integer cnt_r_type = 0;
+    integer cnt_i_type = 0;
+    integer cnt_load   = 0;
+    integer cnt_store  = 0;
+    integer cnt_branch = 0;
+    integer cnt_jal    = 0;
+    integer cnt_lui    = 0;
+    integer total_cycles = 0;
+
+    // We check the Instruction Register (IR) every time the FSM is in the DECODE state (State 1).
+    // This ensures we count each instruction exactly once per execution.
+    always @(posedge clk) begin
+        if (!rst) total_cycles = total_cycles + 1; 
+
+        // Only count instruction when FSM enters DECODE state
+        if (uut.Controller.FSM.state == 4'd1) begin
+            case (uut.IR_Unit.instr[6:0]) 
+                7'b0110011: cnt_r_type = cnt_r_type + 1; // R-Type
+                7'b0010011: cnt_i_type = cnt_i_type + 1; // I-Type (ADDI)
+                7'b0000011: cnt_load   = cnt_load   + 1; // LW
+                7'b0100011: cnt_store  = cnt_store  + 1; // SW
+                7'b1100011: cnt_branch = cnt_branch + 1; // BEQ
+                7'b1101111: cnt_jal    = cnt_jal    + 1; // JAL
+                7'b0110111: cnt_lui    = cnt_lui    + 1; // LUI
+            endcase
+        end
+    end
 
     // Clock Generation
     initial begin
@@ -22,25 +51,19 @@ module riscv_tb;
         $dumpfile("cpu_wave.vcd");
         $dumpvars(0, riscv_tb);
 
-        // --- 1. MEMORY INITIALIZATION ---
-        // Load program into the NEW Instruction Memory (I_MEM)
+        // Load program into the Instruction Memory
         $readmemh("program.hex", uut.I_MEM.RAM); 
-        
-        // Initialize Data Memory (MEM) to 0 to avoid X
-        // (Optional, but good for clean logs)
-        // integer i;
-        // for (i=0; i<256; i=i+1) uut.MEM.RAM[i] = 0;
 
-        // --- 2. RESET SEQUENCE ---
+        // RESET SEQUENCE
         rst = 1;
         #20;
         @(negedge clk);
         rst = 0;
 
-        // --- 3. RUN SIMULATION ---
+        // RUN SIMULATION 
         #6000;
 
-        // --- 4. VERIFICATION ---
+        // VERIFICATION
         $display("-------------------------------------------------------------");
         $display("FINAL REGISTER STATE");
         $display("x1 (Loop Count): %d", uut.Reg_File.registers[1]); 
@@ -60,10 +83,26 @@ module riscv_tb;
         $display("-------------------------------------------------------------");
         
         if (uut.Reg_File.registers[10] === 32'hdeadb000 && uut.Reg_File.registers[1] === 5)
-            $display(">>> SUCCESS: Multicycle Processor Passed! <<<");
+            $display("SUCCESS: Multicycle Processor Passed!");
         else
-            $display(">>> FAILURE: Results mismatch. <<<");
+            $display("FAILURE: Results mismatch. DDD:");
         
+        // Used to solve section 4.2; performance analysis and fill the table.
+        $display("\n--- CPI STATISTICS TABLE ---");
+        $display("Type      | Cycles | Count");
+        $display("----------|--------|------");
+        $display("R-Type    | 4      | %0d", cnt_r_type);
+        $display("I-Type    | 4      | %0d", cnt_i_type);
+        $display("LW        | 5      | %0d", cnt_load);
+        $display("SW        | 4      | %0d", cnt_store);
+        $display("BEQ       | 3      | %0d", cnt_branch);
+        $display("JAL       | 3      | %0d", cnt_jal);
+        $display("LUI       | 4      | %0d", cnt_lui);
+        $display("--------------------------");
+        $display("Total Instr: %0d", (cnt_r_type+cnt_i_type+cnt_load+cnt_store+cnt_branch+cnt_jal+cnt_lui));
+        $display("Total Cycles: %0d", total_cycles);
+        $display("--------------------------");
+
         $finish;
     end
 endmodule

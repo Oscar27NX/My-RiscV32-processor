@@ -1,9 +1,10 @@
+// Simplified ALU Decoder Module for RISC-V
 module ALU_Decoder (
-    input wire [1:0] ALUOp,      // 00=Add, 01=Sub, 10=R-type/I-type func
+    input wire [1:0] ALUOp,    
     input wire [2:0] funct3,
     input wire [6:0] funct7,
     input wire [6:0] opcode,    
-    output reg [3:0] ALUControl  // 4-bit Control
+    output reg [3:0] ALUControl  
 );
 
     always @(*) begin

@@ -1,12 +1,13 @@
+// The instruction decoder module; extracts fields and sign-extends immediates
 module MyInstructionDecoder (
     input wire [31:0] instr,
     output wire [6:0] opcode,
     output wire [2:0] funct3,
     output wire [6:0] funct7,
-    output reg [31:0] imm_ext // Sign-Extended Immediate
+    output reg [31:0] imm_ext 
 );
 
-    // Field Extraction
+    // Field Extraction according to RISC-V manual
     assign opcode = instr[6:0];
     assign funct3 = instr[14:12];
     assign funct7 = instr[31:25];
@@ -26,14 +27,12 @@ module MyInstructionDecoder (
                 imm_ext = {{20{instr[31]}}, instr[31:25], instr[11:7]};
 
             // B-Type (BEQ, BNE, BLT...)
-            // FIX: Subtract 4 because PC is already (PC+4) in Decode stage
             7'b1100011: begin
                 raw_imm = {{20{instr[31]}}, instr[7], instr[30:25], instr[11:8], 1'b0};
                 imm_ext = raw_imm - 32'd4; 
             end
 
             // J-Type (JAL)
-            // FIX: Subtract 4 because PC is already (PC+4) in Decode stage
             7'b1101111: begin
                 raw_imm = {{12{instr[31]}}, instr[19:12], instr[20], instr[30:21], 1'b0};
                 imm_ext = raw_imm - 32'd4;

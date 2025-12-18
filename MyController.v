@@ -2,7 +2,7 @@
 module MyController (
     input wire clk,
     input wire rst,
-    input wire [31:0] instr,    // Full instruction from IR
+    input wire [31:0] instr,  
     input wire Zero,            // From ALU
 
     // Outputs to Datapath 
@@ -22,9 +22,9 @@ module MyController (
     wire [6:0] opcode;
     wire [2:0] funct3;
     wire [6:0] funct7;
-    wire [1:0] alu_op; // Was ALUOp
+    wire [1:0] alu_op; 
 
-    // 1. Instruction Decoder (Extraction + Sign Extension)
+    // Instruction Decoder (Extraction + Sign Extension)
     MyInstructionDecoder ID (
         .instr(instr),
         .opcode(opcode),
@@ -33,7 +33,7 @@ module MyController (
         .imm_ext(imm_ext)
     );
 
-    // 2. Main FSM (State Logic)
+    // Main FSM (State Logic)
     Main_FSM FSM (
         .clk(clk),
         .rst(rst),
@@ -50,13 +50,13 @@ module MyController (
         .rf_we(rf_we)
     );
 
-    // 3. ALU Decoder (Control Logic)
+    // ALU Decoder (Control Logic)
     ALU_Decoder AD (
-        .ALUOp(alu_op),       // Connects to the internal wire 'alu_op'
+        .ALUOp(alu_op),    
         .funct3(funct3),
         .funct7(funct7),
         .opcode(opcode),
-        .ALUControl(alu_control) // Connects to the output wire 'alu_control'
+        .ALUControl(alu_control) 
     );
 
 endmodule

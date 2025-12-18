@@ -16,7 +16,7 @@ module Main_FSM (
     output reg rf_we
 );
 
-    // State Encoding (S0 - S11)
+    // State Encoding 
     localparam S0_FETCH     = 4'd0;
     localparam S1_DECODE    = 4'd1;
     localparam S2_MEM_ADDR  = 4'd2;
@@ -158,11 +158,9 @@ module Main_FSM (
 
            // S11: Execute LUI
             S11_LUI: begin
-                // LUI: Result = 0 + Imm. 
-                // CHANGED: Use 2'b01 to select Constant 0 on SrcA Mux
-                sel_alu_src_a = 2'b01; // <--- WAS 2'b10
-                sel_alu_src_b = 2'b01; // Immediate
-                alu_op = 2'b00;        // ADD
+                sel_alu_src_a = 2'b01; 
+                sel_alu_src_b = 2'b01; 
+                alu_op = 2'b00;       
             end
             
             default: ;

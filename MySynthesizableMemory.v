@@ -1,5 +1,6 @@
-// A new memorymodule, used to initialize instruction/data memory
-module MyMemory #(parameter MEM_DEPTH = 256) (
+// A new memory module, used to initialize instruction/data memory
+// hence we avoid using initial blocks in synthesizable code.
+module mem #(parameter MEM_DEPTH = 256) (
     input wire clk,
     input wire we,
     input wire [31:0] addr,

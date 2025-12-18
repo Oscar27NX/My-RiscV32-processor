@@ -1,9 +1,9 @@
-module MyMulticycleProcessor (
+module rv_mc (
     input wire clk,
     input wire rst
 );
     
-    // --- 1. Wires & Control Signals ---
+    // Wires & Control Signals ---
     wire pc_update, sel_mem_addr, dmem_we, ir_we, rf_we;
     wire [1:0] sel_result;
     wire [1:0] sel_alu_src_a;
@@ -11,7 +11,7 @@ module MyMulticycleProcessor (
     wire [3:0] alu_control;
     wire [31:0] imm_ext;
 
-    // --- 2. Data Path Signals ---
+    // Data Path Signals
     wire [31:0] pc_current, pc_input_mux_out;
     wire [31:0] instr_out;              
     wire [31:0] mem_read_data;          
@@ -22,7 +22,7 @@ module MyMulticycleProcessor (
     wire [31:0] src_a, src_b;
     wire [31:0] write_back_data;
     
-    // --- 3. Pipeline Registers ---
+    // Pipeline Registers (intermediate storage)
     reg [31:0] data_reg;    
     reg [31:0] A_reg;       
     reg [31:0] B_reg;       
@@ -42,7 +42,7 @@ module MyMulticycleProcessor (
         end
     end
 
-    // --- 4. Module Instantiations ---
+    // Module Instantiations
 
     // A. Control Unit
     MyController Controller (
@@ -77,9 +77,8 @@ module MyMulticycleProcessor (
         .pc_out(pc_current)
     );
 
-    // C. Instruction Memory (Code)
-    // RENAMED MODULE: MyMemory
-    MyMemory I_MEM (
+    // C. Instruction Memory
+    mem I_MEM (
         .clk(clk),
         .we(1'b0),          
         .addr(pc_current),
@@ -87,9 +86,8 @@ module MyMulticycleProcessor (
         .rd(instr_mem_out)
     );
 
-    // D. Data Memory (Heap/Stack)
-    // RENAMED MODULE: MyMemory
-    MyMemory MEM (
+    // D. Data Memory 
+    mem MEM (
         .clk(clk),
         .we(dmem_we),
         .addr(alu_out_reg),
