@@ -51,6 +51,10 @@ module riscv_tb;
         $dumpfile("cpu_wave.vcd");
         $dumpvars(0, riscv_tb);
 
+        // IMPORTANT. Memory is not initialized as 0. If you don't wanna see "don't care bits" (x) then just uncomment this:
+        // for (i = 0; i < 32; i = i + 1) begin
+        //    uut.Reg_File.registers[i] = 32'b0;
+        // end
         // Load program into the Instruction Memory
         $readmemh("program.hex", uut.I_MEM.RAM); 
 
