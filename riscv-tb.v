@@ -1,44 +1,15 @@
 `timescale 1ns / 1ps
 
-module riscv_tb;
+module debug_tb;
 
     reg clk;
     reg rst;
 
-    // Instantiate the Top Level Multicycle Processor
+    // Instantiate the Processor
     rv_mc uut (
         .clk(clk),
         .rst(rst)
     );
-
-    // COUNTERS
-    integer cnt_r_type = 0;
-    integer cnt_i_type = 0;
-    integer cnt_load   = 0;
-    integer cnt_store  = 0;
-    integer cnt_branch = 0;
-    integer cnt_jal    = 0;
-    integer cnt_lui    = 0;
-    integer total_cycles = 0;
-
-    // We check the Instruction Register (IR) every time the FSM is in the DECODE state (State 1).
-    // This ensures we count each instruction exactly once per execution.
-    always @(posedge clk) begin
-        if (!rst) total_cycles = total_cycles + 1; 
-
-        // Only count instruction when FSM enters DECODE state
-        if (uut.Controller.FSM.state == 4'd1) begin
-            case (uut.IR_Unit.instr[6:0]) 
-                7'b0110011: cnt_r_type = cnt_r_type + 1; // R-Type
-                7'b0010011: cnt_i_type = cnt_i_type + 1; // I-Type (ADDI)
-                7'b0000011: cnt_load   = cnt_load   + 1; // LW
-                7'b0100011: cnt_store  = cnt_store  + 1; // SW
-                7'b1100011: cnt_branch = cnt_branch + 1; // BEQ
-                7'b1101111: cnt_jal    = cnt_jal    + 1; // JAL
-                7'b0110111: cnt_lui    = cnt_lui    + 1; // LUI
-            endcase
-        end
-    end
 
     // Clock Generation
     initial begin
@@ -48,61 +19,75 @@ module riscv_tb;
 
     // Test Sequence
     initial begin
-        $dumpfile("cpu_wave.vcd");
-        $dumpvars(0, riscv_tb);
+        $dumpfile("debug_wave.vcd");
+        $dumpvars(0, debug_tb);
 
-        // Load program into the Instruction Memory
-        $readmemh("program.hex", uut.I_MEM.RAM); 
+        // --- 1. LOAD PROGRAM ---
+        $readmemh("program.hex", uut.I_MEM.RAM);
 
-        // RESET SEQUENCE
+        // --- 2. RESET ---
         rst = 1;
         #20;
-        @(negedge clk);
+        @(negedge clk); 
         rst = 0;
 
-        // RUN SIMULATION 
-        #6000;
+        // --- 3. RUN SIMULATION ---
+        // 11 instructions. Give plenty of time.
+        #2000;
 
-        // VERIFICATION
-        $display("-------------------------------------------------------------");
-        $display("FINAL REGISTER STATE");
-        $display("x1 (Loop Count): %d", uut.Reg_File.registers[1]); 
-        $display("x2 (Limit):      %d", uut.Reg_File.registers[2]);
-        $display("x3 (Pointer):    %d", uut.Reg_File.registers[3]);
-        $display("x10 (Result):    %h", uut.Reg_File.registers[10]);
+        // --- 4. VERIFICATION ---
+        $display("\n-------------------------------------------------------------");
+        $display("DEBUG PROGRAM RESULTS");
         $display("-------------------------------------------------------------");
         
-        // We still check uut.MEM for the results (Data)
-        $display("CHECKING MEMORY (Mem[0]..Mem[4])");
-        $display("Addr 0:  %d (Expect 20)", uut.MEM.RAM[0]);
-        $display("Addr 4:  %d (Expect 22)", uut.MEM.RAM[1]);
-        $display("Addr 8:  %d (Expect 24)", uut.MEM.RAM[2]);
-        $display("Addr 12: %d (Expect 26)", uut.MEM.RAM[3]);
-        $display("Addr 16: %d (Expect 28)", uut.MEM.RAM[4]);
-        
-        $display("-------------------------------------------------------------");
-        
-        if (uut.Reg_File.registers[10] === 32'hdeadb000 && uut.Reg_File.registers[1] === 5)
-            $display("SUCCESS: Multicycle Processor Passed!");
-        else
-            $display("FAILURE: Results mismatch. DDD:");
-        
-        // Used to solve section 4.2; performance analysis and fill the table.
-        $display("\n--- CPI STATISTICS TABLE ---");
-        $display("Type      | Cycles | Count");
-        $display("----------|--------|------");
-        $display("R-Type    | 4      | %0d", cnt_r_type);
-        $display("I-Type    | 4      | %0d", cnt_i_type);
-        $display("LW        | 5      | %0d", cnt_load);
-        $display("SW        | 4      | %0d", cnt_store);
-        $display("BEQ       | 3      | %0d", cnt_branch);
-        $display("JAL       | 3      | %0d", cnt_jal);
-        $display("LUI       | 4      | %0d", cnt_lui);
-        $display("--------------------------");
-        $display("Total Instr: %0d", (cnt_r_type+cnt_i_type+cnt_load+cnt_store+cnt_branch+cnt_jal+cnt_lui));
-        $display("Total Cycles: %0d", total_cycles);
-        $display("--------------------------");
+        // 1. ADDI x5, x0, 10
+        $display("x5 (Immediate 10):      %d (Expect 10)", $signed(uut.Reg_File.registers[5]));
 
+        // 2. ADDI x6, x0, -5
+        $display("x6 (Immediate -5):      %d (Expect -5)", $signed(uut.Reg_File.registers[6]));
+
+        // 3. OR x7, x5, x6  -> (10 | -5) = -5
+        $display("x7 (OR Result):         %d (Expect -5)", $signed(uut.Reg_File.registers[7]));
+        
+        // 4. SW x7, 0(x0)   -> Mem[0] should be -5
+        $display("Mem[0] (Store x7):      %d (Expect -5)", $signed(uut.MEM.RAM[0]));
+
+        // 5. ADDI x8, x5, 20 -> 10 + 20 = 30
+        $display("x8 (10 + 20):           %d (Expect 30)", $signed(uut.Reg_File.registers[8]));
+
+        // 6. ADD x9, x8, x7 -> 30 + (-5) = 25
+        $display("x9 (30 + -5):           %d (Expect 25)", $signed(uut.Reg_File.registers[9]));
+
+        // 7. SW x9, 4(x0)   -> Mem[4] (Index 1) should be 25
+        $display("Mem[4] (Store x9):      %d (Expect 25)", $signed(uut.MEM.RAM[1]));
+
+        // 8. BEQ x9, x5, +8 -> (25 == 10)? False. Should NOT take branch.
+        // If it failed and took the branch, x10 would remain 0 (or x).
+        // Since it continues, x10 gets written in step 9.
+
+        // 9. ADDI x10, x0, 1
+        $display("x10 (Branch Skipped?):  %d (Expect 1)", $signed(uut.Reg_File.registers[10]));
+
+        // 10. ADDI x11, x0, 123
+        $display("x11 (Final Value):      %d (Expect 123)", $signed(uut.Reg_File.registers[11]));
+
+        $display("-------------------------------------------------------------");
+
+        if (uut.Reg_File.registers[5] === 10 && 
+            uut.Reg_File.registers[6] === -5 &&
+            uut.Reg_File.registers[7] === -5 &&
+            uut.MEM.RAM[0] === -5 && // Check Memory Word 0
+            uut.Reg_File.registers[8] === 30 &&
+            uut.Reg_File.registers[9] === 25 &&
+            uut.MEM.RAM[1] === 25 && // Check Memory Word 1 (Addr 4)
+            uut.Reg_File.registers[10] === 1 &&
+            uut.Reg_File.registers[11] === 123) 
+        begin
+            $display(">>> SUCCESS: Debug Program Passed! <<<");
+        end else begin
+            $display(">>> FAILURE: Values did not match expectations. <<<");
+        end
+        
         $finish;
     end
 endmodule

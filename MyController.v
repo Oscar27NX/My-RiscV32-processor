@@ -1,4 +1,4 @@
-// Wrapper module that integrates the Instruction Decoder, Main FSM, and ALU Decoder
+// Wrapper module that integrates the Instruction Decoder, Control Unit, ALU Decoder and the ImmGen
 module MyController (
     input wire clk,
     input wire rst,
@@ -6,16 +6,14 @@ module MyController (
     input wire Zero,            // From ALU
 
     // Outputs to Datapath 
-    output wire pc_update,      
-    output wire sel_mem_addr,   
-    output wire dmem_we,        
-    output wire ir_we,          
-    output wire rf_we,          
-    output wire [1:0] sel_result,   
-    output wire [1:0] sel_alu_src_a,
-    output wire [1:0] sel_alu_src_b, 
-    output wire [3:0] alu_control,   
-    output wire [31:0] imm_ext       
+    output wire d_jump,
+    output wire d_branch,
+    output wire d_sel_result,
+    output wire d_we_dm,
+    output wire d_alu_control,
+    output wire d_sel_alu_src_b,
+    output wire [31:0] d_sel_ext,
+    output wire d_we_rf
 );
 
     // Internal wires connecting Decoder to FSM/ALU_Dec
@@ -30,33 +28,32 @@ module MyController (
         .opcode(opcode),
         .funct3(funct3),
         .funct7(funct7),
-        .imm_ext(imm_ext)
+        .imm_ext(d_sel_ext)
     );
 
-    // Main FSM (State Logic)
-    Main_FSM FSM (
-        .clk(clk),
-        .rst(rst),
+    // Main Control Unit
+    Main_Decoder CU (
         .opcode(opcode),
-        .Zero(Zero),
-        .pc_update(pc_update),
-        .sel_mem_addr(sel_mem_addr),
-        .dmem_we(dmem_we),
-        .ir_we(ir_we),
-        .sel_result(sel_result),
-        .alu_op(alu_op),
-        .sel_alu_src_a(sel_alu_src_a),
-        .sel_alu_src_b(sel_alu_src_b),
-        .rf_we(rf_we)
+        .reg_write(d_we_rf),
+        .mem_write(d_we_dm),
+        .alu_src(d_sel_alu_src_b),
+        .result_src(d_sel_result),
+        .branch(d_branch),
+        .jump(d_jump),
+        .alu_op(alu_op)
     );
 
-    // ALU Decoder (Control Logic)
-    ALU_Decoder AD (
-        .ALUOp(alu_op),    
+    // ALU Decoder
+    ALU_Decoder ALU_Dec (
+        .ALUOp(alu_op),
         .funct3(funct3),
         .funct7(funct7),
         .opcode(opcode),
-        .ALUControl(alu_control) 
+        .ALUControl(d_alu_control)
     );
+
+    // immediate generator is integrated in the Instruction Decoder
+
+
 
 endmodule
