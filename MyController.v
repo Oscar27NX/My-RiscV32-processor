@@ -1,3 +1,4 @@
+// Composed of first level decoder (instruction type) and second level decoder (alu control)
 module MyController (
     input wire clk,
     input wire rst,

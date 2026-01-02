@@ -2,64 +2,79 @@ module rv_pl(
     input wire clk,
     input wire rst_n
 );
-    // ============================================
-    // SIGNAL DEFINITIONS
-    // ============================================
-    
-    wire rst = ~rst_n; // Internal active-high reset
- 
-    // --- Fetch Stage (F) ---
+    wire rst = ~rst_n;
+
+    // Fetch
     wire [31:0] F_pc, F_pc_p4, F_instr, F_pc_next;
     wire        F_stall; 
-    wire        F_flush; 
 
-    // --- Decode Stage (D) ---
+    // Decode
     wire [31:0] D_pc, D_pc_p4, D_instr, D_imm_ext;
     wire [31:0] D_rf_rd1, D_rf_rd2;
-    wire [4:0]  D_rf_a3; // Derived from instr
-    
-    // Controller Signals (D)
+    wire [4:0]  D_rf_a3; 
     wire        D_jump, D_branch, D_we_dm, D_sel_alu_src_b, D_we_rf;
     wire [1:0]  D_sel_result;
     wire [3:0]  D_alu_control;
+    wire        D_stall, D_flush;
 
-    // --- Execute Stage (E) ---
+    // Execute
     wire [31:0] E_pc, E_pc_p4, E_rf_rd1, E_rf_rd2, E_ext;
     wire [31:0] E_alu_src_a, E_alu_src_b, E_alu_o, E_target_pc;
-    wire [4:0]  E_rf_a3;
-    
-    // Controller Signals (E)
+    wire [31:0] E_src_a_forwarded, E_src_b_forwarded; // Outputs of 3Mux
+    wire [4:0]  E_rf_a3, E_rs1, E_rs2;
     wire        E_jump, E_branch, E_we_dm, E_sel_alu_src_b, E_we_rf;
     wire [1:0]  E_sel_result;
     wire [3:0]  E_alu_control;
     wire        E_zero, E_flush;
 
-    // --- Memory Stage (M) ---
+    // Memory
     wire [31:0] M_pc_p4, M_alu_o, M_dm_wd, M_dm_rd;
     wire [4:0]  M_rf_a3;
     wire        M_we_dm, M_we_rf;
     wire [1:0]  M_sel_result;
 
-    // --- Writeback Stage (W) ---
+    // Writeback
     wire [31:0] W_pc_p4, W_alu_o, W_dm_rd, W_result;
     wire [4:0]  W_rf_a3;
     wire        W_we_rf;
     wire [1:0]  W_sel_result;
 
-    // Control Logic for Branching
-    wire PC_Src; 
-    assign PC_Src = E_jump | (E_branch & E_zero);
+    // Hazard Control Signals
+    // let the HU "peek" at these signals, so we can determine hazards
+    wire [1:0]  ForwardAE, ForwardBE;
+    wire        PC_Src; 
 
-    // Hazard Placeholders (Until Hazard Unit is added)
-    assign F_stall = 1'b0; 
-    assign F_flush = PC_Src; // Flush Fetch if Branch Taken
-    assign E_flush = PC_Src; // Flush Decode if Branch Taken
+    // ============================================
+    // HAZARD UNIT set-up
+    // ============================================
+    
+    MyHazardUnit HU (
+        .Rs1E        (E_rs1),
+        .Rs2E        (E_rs2),
+        .RdM         (M_rf_a3),
+        .RegWriteM   (M_we_rf),
+        .RdW         (W_rf_a3),
+        .RegWriteW   (W_we_rf),
+        
+        .Rs1D        (D_instr[19:15]),
+        .Rs2D        (D_instr[24:20]),
+        .RdE         (E_rf_a3),
+        .ResultSrcE0 (E_sel_result[0]), 
+        .PCSrcE      (PC_Src),
+
+        .ForwardAE   (ForwardAE),
+        .ForwardBE   (ForwardBE),
+        .StallF      (F_stall),
+        .StallD      (D_stall),
+        .FlushE      (E_flush),
+        .FlushD      (D_flush)
+    );
 
     // ============================================
     // FETCH STAGE
     // ============================================
 
-    // PC Mux
+    assign PC_Src = E_jump | (E_branch & E_zero);
     assign F_pc_next = (PC_Src) ? E_target_pc : F_pc_p4;
 
     MyProgramCounter PC (
@@ -84,11 +99,12 @@ module rv_pl(
     // ============================================
     // PIPE: F -> D
     // ============================================
+    
     FD_register PLR1 (
         .clk     (clk),
         .rst_n   (rst_n),
         .stall   (F_stall),
-        .flush   (F_flush),
+        .flush   (D_flush), 
         .F_pc    (F_pc),
         .F_pc4   (F_pc_p4),
         .F_instr (F_instr),
@@ -101,16 +117,13 @@ module rv_pl(
     // DECODE STAGE
     // ============================================
 
-    // Split Instruction for RegFile
-    assign D_rf_a3 = D_instr[11:7]; // rd
+    assign D_rf_a3 = D_instr[11:7];
 
     MyController Controller (
         .clk             (clk),
         .rst             (rst),
         .instr           (D_instr),
-        .Zero            (1'b0), // Not used in ID
-        
-        // Output Mappings
+        .Zero            (1'b0),
         .d_jump          (D_jump),
         .d_branch        (D_branch),
         .d_sel_result    (D_sel_result),
@@ -125,9 +138,9 @@ module rv_pl(
         .clk        (clk),
         .rs1        (D_instr[19:15]),
         .rs2        (D_instr[24:20]),
-        .rd         (W_rf_a3),      // Feedback from WB
-        .write_data (W_result),     // Feedback from WB
-        .reg_write  (W_we_rf),      // Feedback from WB
+        .rd         (W_rf_a3),      
+        .write_data (W_result),     
+        .reg_write  (W_we_rf),      
         .read_data1 (D_rf_rd1),
         .read_data2 (D_rf_rd2)
     );
@@ -135,20 +148,26 @@ module rv_pl(
     // ============================================
     // PIPE: D -> E
     // ============================================
+
     DE_Register PLR2 (
         .clk              (clk),
         .rst_n            (rst_n),
         .flush            (E_flush),
         
-        // Data
         .D_pc             (D_pc),
         .D_rf_rd1         (D_rf_rd1),
         .D_rf_rd2         (D_rf_rd2),
         .D_ext            (D_imm_ext),
         .D_rf_a3          (D_rf_a3),
         .D_pc_p4          (D_pc_p4),
+        .D_rs1           (D_instr[19:15]),
+        .D_rs2           (D_instr[24:20]),
         
-        // Control
+        // Pass RS1/RS2 Indices for Hazard Unit
+        // IF YOUR DE_REGISTER DOES NOT HAVE THESE PORTS, ADD THEM!
+        // .rs1_in (D_instr[19:15]), .rs1_out(E_rs1),
+        // .rs2_in (D_instr[24:20]), .rs2_out(E_rs2),
+        
         .D_jump           (D_jump),
         .D_branch         (D_branch),
         .D_sel_result     (D_sel_result),
@@ -157,13 +176,14 @@ module rv_pl(
         .D_sel_alu_src_b  (D_sel_alu_src_b),
         .D_we_rf          (D_we_rf),
 
-        // Outputs
         .E_pc             (E_pc),
         .E_rf_rd1         (E_rf_rd1),
         .E_rf_rd2         (E_rf_rd2),
         .E_ext            (E_ext),
         .E_rf_a3          (E_rf_a3),
         .E_pc_p4          (E_pc_p4),
+        .E_rs1           (E_rs1),
+        .E_rs2           (E_rs2),
         
         .E_jump           (E_jump),
         .E_branch         (E_branch),
@@ -173,25 +193,43 @@ module rv_pl(
         .E_sel_alu_src_b  (E_sel_alu_src_b),
         .E_we_rf          (E_we_rf)
     );
+    
 
     // ============================================
     // EXECUTE STAGE
     // ============================================
 
-    // Branch Target Logic: E_pc + E_ext (Standard RISC-V)
+    // 1. FORWARDING MUX A
+    ThreeMux MuxA (
+        .in0 (E_rf_rd1),
+        .in1 (W_result),
+        .in2 (M_alu_o),
+        .sel  (ForwardAE),
+        .out  (E_src_a_forwarded)
+    );
+
+    // 2. FORWARDING MUX B
+    ThreeMux MuxB (
+        .in0 (E_rf_rd2),
+        .in1 (W_result),
+        .in2 (M_alu_o),
+        .sel  (ForwardBE),
+        .out  (E_src_b_forwarded)
+    );
+
     MyAdder Branch_Adder (
         .a      (E_pc), 
         .b      (E_ext),
         .sum    (E_target_pc)
     );
 
-    // ALU Multiplexers
-    assign E_alu_src_a = E_rf_rd1; // No Forwarding yet
-    assign E_alu_src_b = (E_sel_alu_src_b) ? E_ext : E_rf_rd2;
+    // 3. ALU SRC B MUX (Immediate vs Forwarded B)
+    assign E_alu_src_b = (E_sel_alu_src_b) ? E_ext : E_src_b_forwarded;
 
     MyALU ALU (
         .alu_control (E_alu_control),
-        .operand_a   (E_alu_src_a),
+        // Operands come from forwarding Muxes
+        .operand_a   (E_src_a_forwarded),
         .operand_b   (E_alu_src_b),
         .alu_result  (E_alu_o),
         .zero        (E_zero)
@@ -203,19 +241,18 @@ module rv_pl(
     EM_Register PLR3 (
         .clk            (clk),
         .rst_n          (rst_n),
+        .flush          (1'b0),
         
-        // Data
         .E_alu_o        (E_alu_o),
-        .E_dm_wd        (E_rf_rd2), // Data to write to mem is RS2
+        // Source depends on forwarding logic determined by the 3-way Mux
+        .E_dm_wd        (E_src_b_forwarded), 
         .E_rf_a3        (E_rf_a3),
         .E_pc_p4        (E_pc_p4),
         
-        // Control
         .E_sel_result   (E_sel_result),
         .E_we_dm        (E_we_dm),
         .E_we_rf        (E_we_rf),
 
-        // Outputs
         .M_alu_o        (M_alu_o),
         .M_dm_wd        (M_dm_wd),
         .M_rf_a3        (M_rf_a3),
@@ -244,18 +281,16 @@ module rv_pl(
     MW_Register PLR4 (
         .clk            (clk),
         .rst_n          (rst_n),
+        .flush          (1'b0),
         
-        // Data
         .M_dm_rd        (M_dm_rd),
         .M_alu_o        (M_alu_o),
         .M_rf_a3        (M_rf_a3),
         .M_pc_p4        (M_pc_p4),
         
-        // Control
         .M_sel_result   (M_sel_result),
         .M_we_rf        (M_we_rf),
 
-        // Outputs
         .W_dm_rd        (W_dm_rd),
         .W_alu_o        (W_alu_o),
         .W_rf_a3        (W_rf_a3),
@@ -269,7 +304,6 @@ module rv_pl(
     // WRITEBACK STAGE
     // ============================================
 
-    // Result Mux: 00=ALU, 01=Mem, 10=PC+4
     assign W_result = (W_sel_result == 2'b00) ? W_alu_o :
                       (W_sel_result == 2'b01) ? W_dm_rd :
                       (W_sel_result == 2'b10) ? W_pc_p4 : 32'b0;

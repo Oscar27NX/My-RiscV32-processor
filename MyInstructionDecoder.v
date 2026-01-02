@@ -25,12 +25,12 @@ module MyInstructionDecoder (
 
             // B-Type (BEQ, BNE, BLT...)
             7'b1100011: begin
-                imm_ext = {{20{instr[31]}}, instr[7], instr[30:25], instr[11:8], 1'b0} - 32'd4; 
+                imm_ext = {{20{instr[31]}}, instr[7], instr[30:25], instr[11:8], 1'b0}; 
             end
 
             // J-Type (JAL)
             7'b1101111: begin
-                imm_ext = {{12{instr[31]}}, instr[19:12], instr[20], instr[30:21], 1'b0} - 32'd4;
+                imm_ext = {{12{instr[31]}}, instr[19:12], instr[20], instr[30:21], 1'b0};
             end
 
             // U-Type (LUI)

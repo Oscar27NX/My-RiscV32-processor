@@ -1,10 +1,11 @@
+// Register that holds signals between the F and D stages
 module FD_register (
     input wire clk,
     input wire rst_n,      
-    input wire stall,      
-    input wire flush,       
+    input wire stall,      // also Stall only for this stage since F stage PC is handled separately
+    input wire flush,      // Flush D stage on branch
 
-    // Inputs from IF Stage
+    // Inputs from the F stage
     input wire [31:0] F_pc4,
     input wire [31:0] F_pc, 
     input wire [31:0] F_instr, // fetched instruction
@@ -29,12 +30,13 @@ module FD_register (
             D_pc4 <= 32'b0;
         end
         else if (!stall) begin
+            // Stall handles the PC separately, so just pass values
             D_pc <= F_pc;
             D_instr <= F_instr;
             D_pc4 <= F_pc4;
         end
         else begin
-            // Hold current state (stall)
+            // Hold current state 
             D_pc <= D_pc;
             D_instr <= D_instr;
             D_pc4 <= D_pc4;

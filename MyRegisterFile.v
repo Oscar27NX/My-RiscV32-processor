@@ -21,7 +21,8 @@ module RegisterFile #(parameter WIDTH = 32)(
     integer i;
 
     // Write operation (synchronous)
-    always @(posedge clk) begin
+    // Hazard-handling: must make sensitive to negedge to bring forward the RF write in the same cycle!!
+    always @(negedge clk) begin
         if (reg_write && (rd != 5'b0)) begin
             registers[rd] <= write_data;
         end

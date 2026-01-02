@@ -2,22 +2,21 @@
 module MW_Register (
     input wire clk,
     input wire rst_n,
+    input wire flush,     
 
-    // --- Control Signals (In) ---
-    // Memory controls consumed in MA. Only WB controls left.
+    // Signals from control unit in M stage
     input wire [1:0] M_sel_result,
     input wire M_we_rf,
 
-    // --- Data Signals (In) ---
-    input wire [31:0] M_dm_rd,     // Data read from Memory
-    input wire [31:0] M_alu_o,     // ALU Result (Bypassed Mem)
-    input wire [4:0]  M_rf_a3,     // Destination Register Address
+    // More signals from the M stage
+    input wire [31:0] M_dm_rd,     
+    input wire [31:0] M_alu_o,     
+    input wire [4:0]  M_rf_a3,     
     input wire [31:0] M_pc_p4,
 
-    // --- Outputs (Out to WB stage) ---
+    // Output signals to W stage
     output reg [1:0] W_sel_result,
     output reg W_we_rf,
-    
     output reg [31:0] W_dm_rd,
     output reg [31:0] W_alu_o,
     output reg [4:0]  W_rf_a3,
@@ -25,7 +24,7 @@ module MW_Register (
 );
 
     always @(posedge clk) begin
-        if (!rst_n) begin
+        if (!rst_n || flush) begin
             W_sel_result <= 2'b0;
             W_we_rf      <= 1'b0;
             W_dm_rd      <= 32'b0;

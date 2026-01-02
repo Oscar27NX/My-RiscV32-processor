@@ -1,4 +1,4 @@
-// second level decoder for the specific alu operations
+// Second level decoding for the specific alu operations
 module ALU_Decoder (
     input wire [1:0] ALUOp,      // From Controller
     input wire [2:0] funct3,      // From Instruction [14:12]
@@ -18,8 +18,8 @@ module ALU_Decoder (
             // Mode 10: R-Type and I-Type Arithmetic
             2'b10: begin 
                 case (funct3)
-                    3'b000: begin // ADD, ADDI, SUB
-                        // Check opcode to ensure ADDI (I-Type) doesn't trigger SUB 
+                    3'b000: begin 
+                        // ADD, ADDI, SUB
                         if (opcode == 7'b0110011 && funct7[5]) 
                             ALUControl = 4'b0001; // SUB
                         else 

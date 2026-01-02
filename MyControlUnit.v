@@ -1,13 +1,13 @@
-// This unit receives the opcode to breakdwown control signals for the datapath
+// This unit receives the opcode to breakdwown control signals for the ALU and other units
 module Main_Decoder (
     input  wire [6:0] opcode,
     output reg       reg_write,
     output reg       mem_write,
-    output reg       alu_src,    // 0 = RegB, 1 = Imm
-    output reg [1:0] result_src, // 00=ALU, 01=Mem, 10=PC+4
+    output reg       alu_src,    
+    output reg [1:0] result_src, 
     output reg       branch,
-    output reg       jump,       // For JAL/JALR
-    output reg [1:0] alu_op      // 00=Add, 01=Sub, 10=R-Type/Funct-based
+    output reg       jump,       
+    output reg [1:0] alu_op    
 );
 
     always @(*) begin
@@ -19,35 +19,35 @@ module Main_Decoder (
             // R-Type (ADD, SUB, OR, etc.)
             7'b0110011: begin 
                 reg_write = 1; 
-                alu_op = 2'b10; // Tell ALU Decoder to look at Funct3
+                alu_op = 2'b10; 
             end
 
             // I-Type Arithmetic (ADDI, etc.)
             7'b0010011: begin 
                 reg_write = 1; 
-                alu_src = 1;    // Use Immediate
-                alu_op = 2'b10; // Use Funct3 (same as R-type usually)
+                alu_src = 1;    
+                alu_op = 2'b10; 
             end
 
             // LW (Load Word)
             7'b0000011: begin 
                 reg_write = 1; 
                 alu_src = 1; 
-                result_src = 2'b01; // Take from Memory
-                alu_op = 2'b00;     // Force ADD (Base + Offset)
+                result_src = 2'b01; 
+                alu_op = 2'b00;    
             end
 
             // SW (Store Word)
             7'b0100011: begin 
                 mem_write = 1; 
                 alu_src = 1; 
-                alu_op = 2'b00;     // Force ADD
+                alu_op = 2'b00;     
             end
 
             // BEQ (Branch)
             7'b1100011: begin 
                 branch = 1; 
-                alu_op = 2'b01;     // Force SUB (to compare)
+                alu_op = 2'b01;     
             end
 
             // JAL (Jump)
