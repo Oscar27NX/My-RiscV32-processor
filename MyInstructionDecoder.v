@@ -12,9 +12,6 @@ module MyInstructionDecoder (
     assign funct3 = instr[14:12];
     assign funct7 = instr[31:25];
 
-    // Temporary variable for calculation
-    reg [31:0] raw_imm;
-
     // Combinational Sign Extension with PC Correction
     always @(*) begin
         case (opcode)
@@ -28,14 +25,12 @@ module MyInstructionDecoder (
 
             // B-Type (BEQ, BNE, BLT...)
             7'b1100011: begin
-                raw_imm = {{20{instr[31]}}, instr[7], instr[30:25], instr[11:8], 1'b0};
-                imm_ext = raw_imm - 32'd4; 
+                imm_ext = {{20{instr[31]}}, instr[7], instr[30:25], instr[11:8], 1'b0} - 32'd4; 
             end
 
             // J-Type (JAL)
             7'b1101111: begin
-                raw_imm = {{12{instr[31]}}, instr[19:12], instr[20], instr[30:21], 1'b0};
-                imm_ext = raw_imm - 32'd4;
+                imm_ext = {{12{instr[31]}}, instr[19:12], instr[20], instr[30:21], 1'b0} - 32'd4;
             end
 
             // U-Type (LUI)
