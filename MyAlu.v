@@ -1,5 +1,5 @@
 // ALU Module. It uses the register with the given control signals to perform operations.
-module MyALU(
+module ALU(
     input wire [3:0] alu_control,
     input wire [31:0] operand_a,
     input wire [31:0] operand_b,

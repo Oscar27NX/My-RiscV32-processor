@@ -1,5 +1,5 @@
 // The instruction decoder module; extracts fields and sign-extends immediates
-module MyInstructionDecoder (
+module InstructionDecoder (
     input wire [31:0] instr,
     output wire [6:0] opcode,
     output wire [2:0] funct3,

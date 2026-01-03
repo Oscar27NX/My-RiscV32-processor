@@ -1,4 +1,4 @@
-module imem #(parameter MEM_DEPTH = 256) (
+module Imem #(parameter MEM_DEPTH = 256) (
     input wire [31:0] addr,
     output wire [31:0] rd
 );

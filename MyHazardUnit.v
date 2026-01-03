@@ -1,5 +1,5 @@
 // Simple HU that handles three basic hazards
-module MyHazardUnit (
+module HazardUnit (
     // Forwarding Inputs (from EX stage)
     input wire [4:0] Rs1E,
     input wire [4:0] Rs2E,

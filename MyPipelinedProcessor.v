@@ -20,7 +20,7 @@ module rv_pl(
     // Execute
     wire [31:0] E_pc, E_pc_p4, E_rf_rd1, E_rf_rd2, E_ext;
     wire [31:0] E_alu_src_a, E_alu_src_b, E_alu_o, E_target_pc;
-    wire [31:0] E_src_a_forwarded, E_src_b_forwarded; // Outputs of 3Mux
+    wire [31:0] E_src_a_forwarded, E_src_b_forwarded;
     wire [4:0]  E_rf_a3, E_rs1, E_rs2;
     wire        E_jump, E_branch, E_we_dm, E_sel_alu_src_b, E_we_rf;
     wire [1:0]  E_sel_result;
@@ -40,7 +40,7 @@ module rv_pl(
     wire [1:0]  W_sel_result;
 
     // Hazard Control Signals
-    // let the HU "peek" at these signals, so we can determine hazards
+    // let the HU "peek" at these signals, so we can determine the hazard cases
     wire [1:0]  ForwardAE, ForwardBE;
     wire        PC_Src; 
 
@@ -48,7 +48,7 @@ module rv_pl(
     // HAZARD UNIT set-up
     // ============================================
     
-    MyHazardUnit HU (
+    HazardUnit HU (
         .Rs1E        (E_rs1),
         .Rs2E        (E_rs2),
         .RdM         (M_rf_a3),
@@ -77,7 +77,7 @@ module rv_pl(
     assign PC_Src = E_jump | (E_branch & E_zero);
     assign F_pc_next = (PC_Src) ? E_target_pc : F_pc_p4;
 
-    MyProgramCounter PC (
+    ProgramCounter PC (
         .clk    (clk),
         .rst    (rst),
         .en     (!F_stall),
@@ -85,13 +85,13 @@ module rv_pl(
         .pc_out (F_pc)
     );
 
-    MyAdder PC_Adder (
+    Adder PC_Adder (
         .a      (F_pc),
         .b      (32'd4),
         .sum    (F_pc_p4)
     );
 
-    imem IMEM (
+    Imem IMEM (
         .addr   (F_pc),
         .rd     (F_instr)
     );
@@ -119,7 +119,7 @@ module rv_pl(
 
     assign D_rf_a3 = D_instr[11:7];
 
-    MyController Controller (
+    Controller Controller (
         .clk             (clk),
         .rst             (rst),
         .instr           (D_instr),
@@ -162,11 +162,6 @@ module rv_pl(
         .D_pc_p4          (D_pc_p4),
         .D_rs1           (D_instr[19:15]),
         .D_rs2           (D_instr[24:20]),
-        
-        // Pass RS1/RS2 Indices for Hazard Unit
-        // IF YOUR DE_REGISTER DOES NOT HAVE THESE PORTS, ADD THEM!
-        // .rs1_in (D_instr[19:15]), .rs1_out(E_rs1),
-        // .rs2_in (D_instr[24:20]), .rs2_out(E_rs2),
         
         .D_jump           (D_jump),
         .D_branch         (D_branch),
@@ -217,7 +212,7 @@ module rv_pl(
         .out  (E_src_b_forwarded)
     );
 
-    MyAdder Branch_Adder (
+    Adder Branch_Adder (
         .a      (E_pc), 
         .b      (E_ext),
         .sum    (E_target_pc)
@@ -226,7 +221,7 @@ module rv_pl(
     // 3. ALU SRC B MUX (Immediate vs Forwarded B)
     assign E_alu_src_b = (E_sel_alu_src_b) ? E_ext : E_src_b_forwarded;
 
-    MyALU ALU (
+    ALU ALU (
         .alu_control (E_alu_control),
         // Operands come from forwarding Muxes
         .operand_a   (E_src_a_forwarded),
@@ -244,7 +239,7 @@ module rv_pl(
         .flush          (1'b0),
         
         .E_alu_o        (E_alu_o),
-        // Source depends on forwarding logic determined by the 3-way Mux
+        // Source depends on forwarding logic determined by 3-way Mux
         .E_dm_wd        (E_src_b_forwarded), 
         .E_rf_a3        (E_rf_a3),
         .E_pc_p4        (E_pc_p4),
@@ -267,7 +262,7 @@ module rv_pl(
     // MEMORY STAGE
     // ============================================
 
-    dmem DMEM (
+    Dmem DMEM (
         .clk    (clk),
         .we     (M_we_dm),
         .addr   (M_alu_o),

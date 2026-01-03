@@ -1,5 +1,5 @@
 // Parametrized Program Counter Module, that simply updates its value on clock edge if enabled.
-module MyProgramCounter #(parameter WIDTH = 32)(
+module ProgramCounter #(parameter WIDTH = 32)(
     input wire clk,
     input wire rst,
     input wire en,            
