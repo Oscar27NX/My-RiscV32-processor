@@ -48,7 +48,7 @@ module MyHazardUnit (
             ForwardBE = 2'b00;
     end
 
-    // STALLING LOGIC (Load-Use Hazard)
+    // STALLING LOGIC
     // If logic in E is a Load, and it writes to a register that D reads, then the control must stall
     assign lwStall = (ResultSrcE0 == 1) && ((RdE == Rs1D) || (RdE == Rs2D));
 
@@ -57,7 +57,7 @@ module MyHazardUnit (
         StallF = lwStall;
         StallD = lwStall;
         
-        // Flush E if we stall (bubble), OR if we take a branch
+        // Flush E if we stall or if we take a branch
         FlushE = lwStall || PCSrcE;
         
         // Flush D if we take a branch

@@ -38,6 +38,8 @@ module ALU_Decoder (
                     default: ALUControl = 4'b0000;
                 endcase
             end
+
+            2'b11: ALUControl = 4'b1111;
             
             default: ALUControl = 4'b0000;
         endcase

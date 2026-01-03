@@ -2,7 +2,7 @@
 module InstructionRegister (
     input wire clk,
     input wire rst,
-    input wire ir_write,        // Controlled by FSM
+    input wire ir_write,       
     input wire [31:0] mem_data,
     output reg [31:0] instr     
 );

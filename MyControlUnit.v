@@ -57,7 +57,24 @@ module Main_Decoder (
                 result_src = 2'b10; // Store PC+4
             end
 
-            default: ;
+               // JALR (Jump Register)
+            7'b1100111: begin
+                reg_write = 1;
+                jump = 1;       
+                alu_src = 1;    // ALU uses Immediate
+                result_src = 2'b10; // Store PC+4 in rd
+                alu_op = 2'b00; // immediate addition for address calculation
+            end
+
+            // U-Type (LUI)
+            7'b0110111: begin
+                reg_write = 1;
+                alu_src   = 1;     // Use Immediate
+                alu_op    = 2'b11; // Special "LUI" O
+            end
+
+            default:
+                ; 
         endcase
     end
 endmodule

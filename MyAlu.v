@@ -10,7 +10,6 @@ module MyALU(
 
     always @(*) begin
         case (alu_control)
-        // check man to ensure headers are correct
             // ADD / ADDI / LW / SW: Funct3=000, Funct7[5]=0
             4'b0000: alu_result = operand_a + operand_b;  
             
@@ -40,6 +39,9 @@ module MyALU(
 
             // AND: Funct3=111, Funct7[5]=0
             4'b1110: alu_result = operand_a & operand_b; 
+
+            // LUI: Load Upper Immediate
+            4'b1111: alu_result = operand_b;
             
             // No operation
             default: alu_result = 32'b0;

@@ -16,12 +16,14 @@ module MyInstructionDecoder (
     always @(*) begin
         case (opcode)
             // I-Type (LW, ADDI, JALR)
-            7'b0000011, 7'b0010011, 7'b1100111: 
+            7'b0000011, 7'b0010011, 7'b1100111: begin 
                 imm_ext = {{20{instr[31]}}, instr[31:20]};
+            end
 
             // S-Type (SW)
-            7'b0100011: 
+            7'b0100011: begin
                 imm_ext = {{20{instr[31]}}, instr[31:25], instr[11:7]};
+            end
 
             // B-Type (BEQ, BNE, BLT...)
             7'b1100011: begin
@@ -34,8 +36,9 @@ module MyInstructionDecoder (
             end
 
             // U-Type (LUI)
-            7'b0110111, 7'b0010111: 
+            7'b0110111, 7'b0010111: begin
                 imm_ext = {instr[31:12], 12'b0};
+            end
 
             default: 
                 imm_ext = 32'b0;
