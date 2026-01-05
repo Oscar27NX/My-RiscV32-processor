@@ -21,7 +21,7 @@ module Controller (
     wire [6:0] funct7;
     wire [1:0] alu_op; 
 
-    MyInstructionDecoder ID (
+    InstructionDecoder ID (
         .instr(instr),
         .opcode(opcode),
         .funct3(funct3),
