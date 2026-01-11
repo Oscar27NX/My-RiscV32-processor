@@ -15,7 +15,7 @@ module Controller (
     output wire [31:0] imm_ext,
     output wire d_we_rf
 );
-
+    // Wires to connect decoders
     wire [6:0] opcode;
     wire [2:0] funct3;
     wire [6:0] funct7;

@@ -1,7 +1,10 @@
+// The top-level module for my pipelined RISC-V processor. 
+// Separated into stages for much clearer and readable design.
 module rv_pl(
     input wire clk,
     input wire rst_n
 );
+    // Setup inverted reset for modules that use active the HIGH reset instead
     wire rst = ~rst_n;
 
     // Fetch

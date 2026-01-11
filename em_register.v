@@ -26,6 +26,7 @@ module EM_Register (input wire clk,
 
     always @(posedge clk) begin
         if (!rst_n || flush) begin
+            // noop or Flush: Set control signals to safe defaults (0)
             M_sel_result <= 2'b0;
             M_we_dm      <= 1'b0;
             M_we_rf      <= 1'b0;
@@ -34,6 +35,7 @@ module EM_Register (input wire clk,
             M_rf_a3      <= 5'b0;
             M_pc_p4      <= 32'b0;
         end else begin
+            // Normal Operation: Pass everything from E to M
             M_sel_result <= E_sel_result;
             M_we_dm      <= E_we_dm;
             M_we_rf      <= E_we_rf;

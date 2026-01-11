@@ -8,6 +8,7 @@ module Dmem #(parameter MEM_DEPTH = 256) (
     output wire [31:0] rd
 );
 
+    // Name the memory RAM as required
     reg [31:0] RAM [0 : MEM_DEPTH-1];
    
     // Synchronous Write
