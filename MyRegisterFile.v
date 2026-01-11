@@ -1,4 +1,4 @@
-// The 32-bit register file module
+// 32-bit register file module
 module RegisterFile #(parameter WIDTH = 32)(
     input clk,                  
     input wire [4:0] rs1,    
@@ -13,13 +13,13 @@ module RegisterFile #(parameter WIDTH = 32)(
     // Declare the register file as an array of 32 registers, each 32 bits wide 
     reg [WIDTH-1:0] registers [0:31];
 
-    // Read operations (combinational logic)
+    // Read operations (combinational)
     assign read_data1 = (rs1 == 5'b0) ? {WIDTH{1'b0}} : registers[rs1];
     assign read_data2 = (rs2 == 5'b0) ? {WIDTH{1'b0}} : registers[rs2];
     integer i;
 
-    // Write operation (synchronous)
-    // Hazard-handling: must make sensitive to negedge to bring forward the RF write in the same cycle!!
+    // Write operation (synchronous => sequential)
+    // Hazard-handling: I made it sensitive to negedge to write as soon as possible after the read
     always @(negedge clk) begin
         if (reg_write && (rd != 5'b0)) begin
             registers[rd] <= write_data;

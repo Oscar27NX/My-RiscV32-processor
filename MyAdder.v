@@ -1,5 +1,4 @@
 // Simple adder. Uses 32-bit inputs and outputs their sum. Combinational logic to support carry over.
-// parametrized width for scalability
 
 module Adder #(parameter WIDTH = 32)(
     input [WIDTH-1:0] a,

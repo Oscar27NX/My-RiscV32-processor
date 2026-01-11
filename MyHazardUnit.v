@@ -1,8 +1,9 @@
-// Simple HU that handles three basic hazards
+// Simple HU that handles the three required basic hazards
 module HazardUnit (
     // Forwarding Inputs (from EX stage)
     input wire [4:0] Rs1E,
     input wire [4:0] Rs2E,
+    
     // Forwarding Inputs (from MEM/WB stages)
     input wire [4:0] RdM,
     input wire       RegWriteM,
@@ -13,10 +14,10 @@ module HazardUnit (
     input wire [4:0] Rs1D,
     input wire [4:0] Rs2D,
     input wire [4:0] RdE,
-    input wire       ResultSrcE0, // 1 if instruction in E is a Load (reads from mem)
+    input wire       ResultSrcE0, // 1 if instruction in E is a Load 
     
     // Control Hazard Input
-    input wire       PCSrcE, // Branch Taken
+    input wire       PCSrcE, // 1 if branch taken or jump in E stage
 
     // Outputs
     output reg [1:0] ForwardAE,
@@ -29,7 +30,7 @@ module HazardUnit (
 
     wire lwStall;
 
-    // RAW FORWARDING LOGIC
+    // RAW-HANDLING FORWARDING LOGIC
     always @(*) begin
         // Forward A
         if ((RegWriteM == 1) && (RdM != 0) && (RdM == Rs1E))
@@ -52,7 +53,7 @@ module HazardUnit (
     // If logic in E is a Load, and it writes to a register that D reads, then the control must stall
     assign lwStall = (ResultSrcE0 == 1) && ((RdE == Rs1D) || (RdE == Rs2D));
 
-    // CONTROL SIGNAL LOGIC
+    // CONTROL SIGNAL LOGIC (branch/jump flushes and load-use stalls)
     always @(*) begin
         StallF = lwStall;
         StallD = lwStall;
