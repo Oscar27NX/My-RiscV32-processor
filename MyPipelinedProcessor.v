@@ -94,15 +94,20 @@ module rv_pl(
         .sum    (F_pc_p4)
     );
 
+    // with sync-operations and used as FD register, we can avoid the latency of async read and use the instruction in the next cycle
     Imem IMEM (
+        .clk    (clk),
+        .en     (!F_stall),   
+        .flush  (D_flush),   
         .addr   (F_pc),
-        .rd     (F_instr)
+        .rd     (F_instr)    
     );
 
     // ============================================
     // PIPE: F -> D
     // ============================================
     
+    // FD_register Instantiation
     FD_register PLR1 (
         .clk     (clk),
         .rst_n   (rst_n),
@@ -110,11 +115,14 @@ module rv_pl(
         .flush   (D_flush), 
         .F_pc    (F_pc),
         .F_pc4   (F_pc_p4),
-        .F_instr (F_instr),
+        .F_instr (32'b0),     // disconnected since we're directly assigning F_instr to D_instr
         .D_pc    (D_pc),
         .D_pc4   (D_pc_p4),
-        .D_instr (D_instr)
+        .D_instr ()          
     );
+
+    // The BRAM output (F_instr) is already synchronized to the Decode stage
+    assign D_instr = F_instr;
 
     // ============================================
     // DECODE STAGE
@@ -276,27 +284,27 @@ module rv_pl(
     // ============================================
     // PIPE: M -> W
     // ============================================
+    // MW_Register Instantiation
     MW_Register PLR4 (
         .clk            (clk),
         .rst_n          (rst_n),
         .flush          (1'b0),
-        
-        .M_dm_rd        (M_dm_rd),
+        .M_dm_rd        (32'b0),        // Disconnect
         .M_alu_o        (M_alu_o),
         .M_rf_a3        (M_rf_a3),
         .M_pc_p4        (M_pc_p4),
-        
         .M_sel_result   (M_sel_result),
         .M_we_rf        (M_we_rf),
-
-        .W_dm_rd        (W_dm_rd),
+        .W_dm_rd        (),             // Disconnect
         .W_alu_o        (W_alu_o),
         .W_rf_a3        (W_rf_a3),
         .W_pc_p4        (W_pc_p4),
-        
         .W_sel_result   (W_sel_result),
         .W_we_rf        (W_we_rf)
     );
+
+    // The BRAM output (M_dm_rd) is already synchronized to the Writeback stage
+    assign W_dm_rd = M_dm_rd;
 
     // ============================================
     // WRITEBACK STAGE
