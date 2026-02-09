@@ -2,10 +2,20 @@
 // Separated into stages for much clearer and readable design.
 module rv_pl(
     input wire clk,
-    input wire rst_n
+    input wire resetn,
+
+    // Instruction Memory Interface (Connects to Instruction BRAM)
+    output wire [31:0] i_addr,
+    input wire [31:0]  i_instr,    // Data coming FROM BRAM
+    
+    // Data Memory Interface (Connects to Data BRAM)
+    output wire [31:0] d_addr,
+    output wire [31:0] d_wdata,
+    output wire [3:0] d_we,
+    input wire [31:0]  d_rdata     // Data coming FROM BRAM
 );
     // Setup inverted reset for modules that use active the HIGH reset instead
-    wire rst = ~rst_n;
+    wire rst = ~resetn;
 
     // Fetch
     wire [31:0] F_pc, F_pc_p4, F_instr, F_pc_next;
@@ -94,35 +104,25 @@ module rv_pl(
         .sum    (F_pc_p4)
     );
 
-    // with sync-operations and used as FD register, we can avoid the latency of async read and use the instruction in the next cycle
-    Imem IMEM (
-        .clk    (clk),
-        .en     (!F_stall),   
-        .flush  (D_flush),   
-        .addr   (F_pc),
-        .rd     (F_instr)    
-    );
+    assign i_addr = F_pc;
+    assign D_instr = i_instr;
 
     // ============================================
     // PIPE: F -> D
     // ============================================
     
-    // FD_register Instantiation
     FD_register PLR1 (
         .clk     (clk),
-        .rst_n   (rst_n),
+        .rst_n   (resetn),
         .stall   (F_stall),
         .flush   (D_flush), 
         .F_pc    (F_pc),
         .F_pc4   (F_pc_p4),
-        .F_instr (32'b0),     // disconnected since we're directly assigning F_instr to D_instr
+        .F_instr (32'b0),
         .D_pc    (D_pc),
         .D_pc4   (D_pc_p4),
-        .D_instr ()          
+        .D_instr ()
     );
-
-    // The BRAM output (F_instr) is already synchronized to the Decode stage
-    assign D_instr = F_instr;
 
     // ============================================
     // DECODE STAGE
@@ -162,7 +162,7 @@ module rv_pl(
 
     DE_Register PLR2 (
         .clk              (clk),
-        .rst_n            (rst_n),
+        .rst_n            (resetn),
         .flush            (E_flush),
         
         .D_pc             (D_pc),
@@ -205,7 +205,7 @@ module rv_pl(
     // EXECUTE STAGE
     // ============================================
 
-    // 1. FORWARDING MUX A
+    // FORWARDING MUX A
     ThreeMux MuxA (
         .in0 (E_rf_rd1),
         .in1 (W_result),
@@ -214,7 +214,7 @@ module rv_pl(
         .out  (E_src_a_forwarded)
     );
 
-    // 2. FORWARDING MUX B
+    // FORWARDING MUX B
     ThreeMux MuxB (
         .in0 (E_rf_rd2),
         .in1 (W_result),
@@ -229,7 +229,7 @@ module rv_pl(
         .sum    (E_target_pc)
     );
 
-    // 3. ALU SRC B MUX (Immediate vs Forwarded B)
+    // ALU SRC B MUX (Immediate vs Forwarded B)
     assign E_alu_src_b = (E_sel_alu_src_b) ? E_ext : E_src_b_forwarded;
 
     ALU ALU (
@@ -246,7 +246,7 @@ module rv_pl(
     // ============================================
     EM_Register PLR3 (
         .clk            (clk),
-        .rst_n          (rst_n),
+        .rst_n          (resetn),
         .flush          (1'b0),
         
         .E_alu_o        (E_alu_o),
@@ -273,38 +273,35 @@ module rv_pl(
     // MEMORY STAGE
     // ============================================
 
-    Dmem DMEM (
-        .clk    (clk),
-        .we     (M_we_dm),
-        .addr   (M_alu_o),
-        .wd     (M_dm_wd),
-        .rd     (M_dm_rd)
-    );
-
+    assign d_addr = M_alu_o;
+    assign d_wdata = M_dm_wd;
+    // write the bit en signal for annoying vivado which does not let us disable byte w enable...
+    assign d_we = {4{M_we_dm}};
+    assign W_dm_rd = d_rdata;
     // ============================================
     // PIPE: M -> W
     // ============================================
-    // MW_Register Instantiation
     MW_Register PLR4 (
         .clk            (clk),
-        .rst_n          (rst_n),
+        .rst_n          (resetn),
         .flush          (1'b0),
-        .M_dm_rd        (32'b0),        // Disconnect
+        
+        .M_dm_rd        (M_dm_rd),
         .M_alu_o        (M_alu_o),
         .M_rf_a3        (M_rf_a3),
         .M_pc_p4        (M_pc_p4),
+        
         .M_sel_result   (M_sel_result),
         .M_we_rf        (M_we_rf),
-        .W_dm_rd        (),             // Disconnect
+
+        .W_dm_rd        (),
         .W_alu_o        (W_alu_o),
         .W_rf_a3        (W_rf_a3),
         .W_pc_p4        (W_pc_p4),
+        
         .W_sel_result   (W_sel_result),
         .W_we_rf        (W_we_rf)
     );
-
-    // The BRAM output (M_dm_rd) is already synchronized to the Writeback stage
-    assign W_dm_rd = M_dm_rd;
 
     // ============================================
     // WRITEBACK STAGE
